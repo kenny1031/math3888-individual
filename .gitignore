@@ -1,86 +1,33 @@
-# ==========================================
 # Python
-# ==========================================
 __pycache__/
 *.py[cod]
-*.so
-*.egg-info/
-build/
-dist/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Virtual environments
 .venv/
-venv/
-env/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local environment
 .env
 .env.*
 
-# ==========================================
-# Jupyter
-# ==========================================
-.ipynb_checkpoints/
-
-# ==========================================
-# macOS / IDE
-# ==========================================
-.DS_Store
-.AppleDouble
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# ==========================================
 # Data
-# ==========================================
-# Keep data/metadata/ and data/README.md
 data/raw/
-data/interim/
 data/processed/
-data/external/
 
-# ==========================================
-# Model checkpoints
-# ==========================================
-checkpoints/
-models/checkpoints/
+# Generated results
+outputs/
 *.pt
 *.pth
 *.ckpt
-*.safetensors
 
-# ==========================================
-# Generated outputs
-# ==========================================
-outputs/
-logs/
-runs/
-tensorboard/
-wandb/
-mlruns/
-
-# ==========================================
-# LaTeX / Overleaf build files
-# ==========================================
+# LaTeX
 *.aux
 *.log
 *.out
-*.toc
 *.synctex.gz
 *.fdb_latexmk
 *.fls
-*.bbl
-*.blg
-*.bcf
-*.run.xml
-
-# ==========================================
-# Temporary files
-# ==========================================
-*.tmp
-*.bak
-*.temp
-.cache/
