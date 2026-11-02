@@ -1,0 +1,74 @@
+seed: 3888
+
+data:
+  edges: data/processed/functional_edges_score_ge_400.csv.gz
+  protein_info: data/raw/4932.protein.info.v12.0.txt.gz
+  id_mapping: data/processed/string_id_to_orf.csv
+  essential_proteins: data/raw/essential_proteins.csv
+
+  confidence_threshold: 700
+  anchor_orf: YMR161W
+
+  # Only include exclusions verified against the Group Report.
+  extra_excluded_orfs:
+    - YBR201W  # DER1
+    - YLR207W  # HRD3
+    - YMR022W  # UBC7
+    - YMR264W  # CUE1
+    - YOL013C  # HRD1
+    - YNL064C  # YDJ1, predefined reference protein
+
+  output_graph: data/processed/graph.pt
+  output_nodes: data/processed/protein_ids.csv
+
+features:
+  log_degree: true
+  log_strength: true
+  clustering_coefficient: true
+  core_number: true
+  standardize: true
+
+gnn:
+  hidden_dim: 64
+  embedding_dim: 64
+
+  # Diffusion
+  propagation_steps: 8
+  continuation: 0.85
+
+  # Training
+  epochs: 100
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  dropout: 0.15
+
+  # Number of positive edges sampled per epoch
+  positive_batch_size: 20000
+
+  # Balanced positive/negative reconstruction
+  negative_ratio: 1.0
+
+  # Fixed cosine-logit scaling
+  logit_scale: 5.0
+
+  # CPU is the simplest reproducible starting point
+  device: mps
+
+evaluation:
+  gaf: data/metadata/YEAST-mod.gaf
+  obo: data/metadata/go-basic.obo
+
+  go_roots:
+    - GO:0006457  # Protein folding
+    - GO:0036503  # ERAD pathway
+    - GO:0034976  # Response to ER stress
+    - GO:0030968  # ER unfolded protein response
+
+  include_part_of: false
+  exclude_evidence: []
+
+  louvain_seeds: [3888, 3889, 3890, 3891, 3892,
+                  3893, 3894, 3895, 3896, 3897]
+
+  null_randomisations: 2000
+  degree_bins: 8
