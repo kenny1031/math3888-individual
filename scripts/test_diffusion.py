@@ -1,11 +1,8 @@
-
 """Numerical experiments for graph diffusion."""
-
 from pathlib import Path
 import argparse
 import json
 import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -28,7 +25,6 @@ def run_experiment(alpha=0.85, max_steps=64):
     graph_path = ROOT / "data/processed/graph.pt"
     figure_dir = ROOT / "figures"
     output_dir = ROOT / "outputs"
-
     figure_dir.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)
 

@@ -95,12 +95,7 @@ def main():
     anchor = int(graph["anchor_index"])
 
     reference = pd.read_csv(ROOT / "data/metadata/group_reference/cadtp_all_scores_refactor.csv")
-
-    eligible = (
-        reference["eligible"]
-        .astype(str).str.lower().eq("true")
-    )
-
+    eligible = reference["eligible"].astype(str).str.lower().eq("true")
     reference = reference.loc[eligible].copy()
     index_of = {sid: i for i, sid in enumerate(ids)}
 
@@ -122,6 +117,58 @@ def main():
         )
 
     star_scores, _ = cosine_scores(H_star, anchor)
+    print("\nFixed-point Top-20 ranking margins:")
+
+    for track, indices in groups.items():
+        ordered = sorted(
+            indices,
+            key=lambda i: (-float(star_scores[i]), str(ids[i])),
+        )
+
+        s20 = float(star_scores[ordered[19]])
+        s21 = float(star_scores[ordered[20]])
+        margin = s20 - s21
+
+        print(
+            f"{track:10s} "
+            f"s20={s20:.8f} "
+            f"s21={s21:.8f} "
+            f"margin={margin:.8e}"
+        )
+
+    R = np.linalg.norm(H0 - H_star, ord="fro")
+
+    print("\nTheoretical ranking stability thresholds:")
+    print(f"R = {R:.8f}")
+
+    for track, indices in groups.items():
+        ordered = sorted(
+            indices,
+            key=lambda i: (-float(star_scores[i]), str(ids[i])),
+        )
+
+        delta = float(star_scores[ordered[19]] - star_scores[ordered[20]])
+
+        # Minimum fixed-point norm, including HLJ1 anchor.
+        relevant = np.append(indices, anchor)
+        m = np.linalg.norm(H_star[relevant], axis=1).min()
+
+        if m <= 0 or delta <= 0:
+            print(f"{track}: conditions not satisfied")
+            continue
+
+        # Smallest K satisfying the sufficient condition.
+        K0 = 0
+        while ALPHA ** K0 * R >= m * delta / 8:
+            K0 += 1
+
+        print(
+            f"{track:10s} "
+            f"m={m:.6f} "
+            f"delta={delta:.6e} "
+            f"certified_K0={K0}"
+        )
+
     star_top = {
         track: top20(star_scores, indices, ids)
         for track, indices in groups.items()
@@ -138,9 +185,7 @@ def main():
             H = ALPHA * (S @ H) + (1 - ALPHA) * H0
 
         k_previous = k
-
         relative_error = np.linalg.norm(H - H_star, "fro") / denominator
-
         energy = dirichlet_energy(S, H)
         scores, Z = cosine_scores(H, anchor)
 
@@ -154,10 +199,7 @@ def main():
         for track, indices in groups.items():
             chosen = top20(scores, indices, ids)
 
-            row[f"jaccard_{track.lower()}"] = jaccard(
-                chosen, star_top[track]
-            )
-
+            row[f"jaccard_{track.lower()}"] = jaccard(chosen, star_top[track])
             ordered = sorted(
                 indices,
                 key=lambda i: (-float(scores[i]), str(ids[i])),
@@ -221,12 +263,10 @@ def main():
     plt.close(fig)
 
     df_plot = df[df["K"] <= 16].copy()
-
     fig, ax = plt.subplots(figsize=(7.5, 4.5))
 
     for track in ["All", *TRACKS]:
         column = f"jaccard_{track.lower()}"
-
         ax.plot(
             df_plot["K"],
             df_plot[column],

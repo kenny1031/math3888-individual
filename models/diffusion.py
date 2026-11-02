@@ -40,7 +40,7 @@ def build_operators(edge_index, edge_weight, num_nodes):
 
     P = sparse.diags(1.0 / degree) @ W
 
-    # GNN operator: S = D_tilde^{-1/2}(W+I)D_tilde^{-1/2}
+    # GNN operator S
     W_tilde = W + sparse.eye(n, format="csr")
 
     degree_tilde = np.asarray(W_tilde.sum(axis=1)).ravel()
@@ -71,9 +71,7 @@ def diffuse(S, H0, alpha=0.85, steps=16):
 
 def solve_fixed_point(S, H0, alpha=0.85):
     """
-    Solve:
-        (I-alpha*S) H* = (1-alpha) H0
-
+    Solve (I-alpha*S) H* = (1-alpha) H0
     Uses conjugate gradient because I-alpha*S
     is symmetric positive definite.
     """
@@ -99,9 +97,7 @@ def solve_fixed_point(S, H0, alpha=0.85):
         )
 
         if info != 0:
-            raise RuntimeError(
-                f"Conjugate gradient failed for column {j}: {info}"
-            )
+            raise RuntimeError(f"Conjugate gradient failed for column {j}: {info}")
 
         H_star[:, j] = solution
 
@@ -111,8 +107,7 @@ def solve_fixed_point(S, H0, alpha=0.85):
 def dirichlet_energy(S, H):
     """
     Normalised graph Dirichlet energy:
-
-        E(H) = tr(H^T (I-S) H)
+    E(H) = tr(H^T (I-S) H)
     """
     H = np.asarray(H, dtype=np.float64)
 
@@ -122,8 +117,7 @@ def dirichlet_energy(S, H):
 def spectral_response(eigenvalues, alpha):
     """
     PPR spectral filter:
-
-        g_alpha(lambda) = (1-alpha)/(1-alpha*lambda)
+    g_alpha(lambda) = (1-alpha)/(1-alpha*lambda)
     """
     eigenvalues = np.asarray(eigenvalues)
 

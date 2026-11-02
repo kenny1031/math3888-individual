@@ -406,14 +406,12 @@ def prepare_eligibility(
         print("    No ERAD seed preferred names matched.")
     else:
         print(
-            seed_rows[
-                [
-                    "preferred_name",
-                    "orf",
-                    "is_essential",
-                    "is_eligible",
-                ]
-            ].to_string(index=False)
+            seed_rows[[
+                "preferred_name",
+                "orf",
+                "is_essential",
+                "is_eligible",
+            ]].to_string(index=False)
         )
 
     # Explain the remaining mismatch without altering data.

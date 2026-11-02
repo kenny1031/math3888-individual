@@ -68,7 +68,6 @@ def load_reference():
 
     scores["eligible"] = parse_bool(scores["eligible"])
     scores = scores[scores["eligible"]].copy()
-
     scores["orf"] = scores["orf"].str.upper().str.strip()
     labels["orf"] = labels["orf"].str.upper().str.strip()
     labels["go_positive"] = parse_bool(labels["proteostasis_any"]).astype(int)
@@ -143,10 +142,7 @@ def attach_gnn_scores(data):
     result = data.copy()
 
     for path in embedding_files:
-        match = re.fullmatch(
-            r"gnn_embeddings_k(\d+)_seed(\d+)\.npz",
-            path.name,
-        )
+        match = re.fullmatch(r"gnn_embeddings_k(\d+)_seed(\d+)\.npz", path.name)
 
         if match is None:
             continue
@@ -166,14 +162,8 @@ def attach_gnn_scores(data):
             raise ValueError(f"Zero-norm embeddings: {path}")
 
         z = z / norms
-
         similarities = z @ z[anchor]
-
-        score_map = pd.Series(
-            similarities,
-            index=nodes["string_id"].to_numpy(),
-        )
-
+        score_map = pd.Series(similarities, index=nodes["string_id"].to_numpy())
         result[method] = result["string_id"].map(score_map)
 
         if result[method].isna().any():
@@ -186,9 +176,7 @@ def attach_gnn_scores(data):
 
 def make_strata(pool):
     """Exact degree and distance bins from Group Report."""
-
     pool = pool.copy()
-
     pool["degree_bin"] = pd.cut(
         pool["degree"],
         bins=[-np.inf, 5, 20, 60, np.inf],
@@ -202,12 +190,7 @@ def make_strata(pool):
         .astype(str)
     )
 
-    pool["stratum"] = (
-        pool["distance_bin"]
-        + "_"
-        + pool["degree_bin"].astype(str)
-    )
-
+    pool["stratum"] = pool["distance_bin"] + "_" + pool["degree_bin"].astype(str)
     if pool["stratum"].isna().any():
         raise ValueError("Missing matching strata.")
 
@@ -216,9 +199,7 @@ def make_strata(pool):
 
 def matched_null(pool, top, rng):
     """Sample matched candidates within the same track."""
-
     quotas = top["stratum"].value_counts()
-
     groups = {
         name: group["go_positive"].to_numpy(dtype=int)
         for name, group in pool.groupby("stratum")
@@ -229,7 +210,6 @@ def matched_null(pool, top, rng):
 
     for b in range(B):
         hits = 0
-
         for stratum, count in quotas.items():
             values = groups[stratum]
 
@@ -241,7 +221,6 @@ def matched_null(pool, top, rng):
                 size=int(count),
                 replace=False,
             )
-
             hits += int(sampled.sum())
 
         null_hits[b] = hits
@@ -252,13 +231,8 @@ def matched_null(pool, top, rng):
         "hits_at_20": observed,
         "precision_at_20": observed / TOP_K,
         "null_mean": null_mean,
-        "matched_fe": (
-            observed / null_mean
-            if null_mean > 0 else np.nan
-        ),
-        "p_value": (
-            1 + np.count_nonzero(null_hits >= observed)
-        ) / (B + 1),
+        "matched_fe": observed / null_mean if null_mean > 0 else np.nan,
+        "p_value": (1 + np.count_nonzero(null_hits >= observed)) / (B + 1),
     }
 
 
@@ -275,14 +249,10 @@ def evaluate(data):
 
     results = []
     top_candidates = []
-
     test_index = 0
 
     for track in TRACKS:
-        pool = make_strata(
-            data[data["track"] == track]
-        )
-
+        pool = make_strata(data[data["track"] == track])
         for method, score_column in methods.items():
             top = pool.sort_values(
                 [score_column, "orf", "string_id"],
@@ -295,7 +265,6 @@ def evaluate(data):
             test_index += 1
 
             statistics = matched_null(pool, top, rng)
-
             results.append({
                 "method": method,
                 "track": track,
@@ -328,20 +297,15 @@ def evaluate(data):
 
 def print_results(results):
     print("\n[4/5] Evaluation results")
-
-    print(
-        results[
-            [
-                "method",
-                "track",
-                "hits_at_20",
-                "precision_at_20",
-                "matched_fe",
-                "p_value",
-                "bh_q",
-            ]
-        ].to_string(index=False)
-    )
+    print(results[[
+        "method",
+        "track",
+        "hits_at_20",
+        "precision_at_20",
+        "matched_fe",
+        "p_value",
+        "bh_q",
+    ]].to_string(index=False))
 
     print("\nBaseline sanity checks:")
 
@@ -357,13 +321,11 @@ def print_results(results):
     }
 
     for (track, method), expected in expected_hits.items():
-        observed = int(
-            results.loc[
-                (results["track"] == track)
-                & (results["method"] == method),
-                "hits_at_20",
-            ].iloc[0]
-        )
+        observed = int(results.loc[
+            (results["track"] == track)
+            & (results["method"] == method),
+            "hits_at_20",
+        ].iloc[0])
 
         status = "PASS" if observed == expected else "CHECK"
 
@@ -372,16 +334,12 @@ def print_results(results):
             f"observed={observed}, expected={expected}"
         )
 
-    if any(
-            int(
-                results.loc[
-                    (results["track"] == track)
-                    & (results["method"] == method),
-                    "hits_at_20",
-                ].iloc[0]
-            ) != expected
-            for (track, method), expected in expected_hits.items()
-    ):
+    if any(int(results.loc[
+        (results["track"] == track)
+        & (results["method"] == method),
+        "hits_at_20",
+    ].iloc[0]) != expected
+    for (track, method), expected in expected_hits.items()):
         print(
             "\nWARNING: Two Cross-track baseline results differ "
             "from the published Group Report. "
@@ -393,21 +351,13 @@ def print_results(results):
 def plot_gnn_results(results):
     print("\n[5/5] Generating comparison figure")
 
-    gnn = results[
-        results["method"].str.startswith("GNN_K")
-    ].copy()
-
-    gnn["K"] = (
-        gnn["method"].str.extract(r"GNN_K(\d+)")[0].astype(int)
-    )
+    gnn = results[results["method"].str.startswith("GNN_K")].copy()
+    gnn["K"] = gnn["method"].str.extract(r"GNN_K(\d+)")[0].astype(int)
 
     fig, ax = plt.subplots(figsize=(7.5, 4.5))
 
     for track in TRACKS:
-        subset = gnn[
-            gnn["track"] == track
-        ].sort_values("K")
-
+        subset = gnn[gnn["track"] == track].sort_values("K")
         ax.plot(
             subset["K"],
             100 * subset["precision_at_20"],
@@ -439,16 +389,8 @@ def main():
     data = attach_gnn_scores(data)
 
     results, top_candidates = evaluate(data)
-
-    results.to_csv(
-        OUTPUT / "aligned_go_evaluation.csv",
-        index=False,
-    )
-
-    top_candidates.to_csv(
-        OUTPUT / "aligned_top20_candidates.csv",
-        index=False,
-    )
+    results.to_csv(OUTPUT / "aligned_go_evaluation.csv", index=False)
+    top_candidates.to_csv(OUTPUT / "aligned_top20_candidates.csv", index=False)
 
     print_results(results)
     plot_gnn_results(results)

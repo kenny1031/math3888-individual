@@ -32,10 +32,8 @@ def load_network(graph):
     G = nx.Graph()
     G.add_nodes_from(range(graph["num_nodes"]))
 
-    G.add_weighted_edges_from(
-        (
-            int(u), int(v), float(w)
-        )
+    G.add_weighted_edges_from((
+        int(u), int(v), float(w))
         for u, v, w in zip(
             edges[0, mask],
             edges[1, mask],
@@ -48,7 +46,6 @@ def load_network(graph):
 
 def compute_tracks(G, anchor, seeds):
     """Louvain co-membership frequency with HLJ1."""
-
     counts = np.zeros(G.number_of_nodes(), dtype=int)
 
     for seed in seeds:
@@ -72,11 +69,7 @@ def compute_tracks(G, anchor, seeds):
     track = np.where(
         frequency >= 0.8,
         "Local",
-        np.where(
-            frequency <= 0.2,
-            "Cross",
-            "Boundary",
-        ),
+        np.where(frequency <= 0.2, "Cross", "Boundary"),
     )
 
     return pd.DataFrame({
@@ -104,42 +97,32 @@ def matched_null_test(
     rng = np.random.default_rng(seed)
 
     population = population.copy()
-
     population["degree_bin"] = pd.qcut(
         population["degree"].rank(method="first"),
         q=min(degree_bins, len(population)),
         labels=False,
         duplicates="drop",
     )
-
+    
     population["stratum"] = list(zip(
         population["distance"].astype(int),
         population["degree_bin"].astype(int),
     ))
 
     selected_indices = set(selected["node_index"])
-
-    top = population[
-        population["node_index"].isin(selected_indices)
-    ]
-
+    top = population[population["node_index"].isin(selected_indices)]
     observed = int(top["go_positive"].sum())
-
     pools = {
         key: group["go_positive"].to_numpy(dtype=int)
         for key, group in population.groupby("stratum")
     }
-
     selected_counts = top["stratum"].value_counts()
-
     null_hits = np.zeros(B, dtype=int)
 
     for b in range(B):
         hits = 0
-
         for stratum, count in selected_counts.items():
             pool = pools[stratum]
-
             sampled = rng.choice(
                 pool,
                 size=int(count),
@@ -150,9 +133,7 @@ def matched_null_test(
 
         null_hits[b] = hits
 
-    p = (
-        1 + np.count_nonzero(null_hits >= observed)
-    ) / (B + 1)
+    p = (1 + np.count_nonzero(null_hits >= observed)) / (B + 1)
 
     null_mean = float(null_hits.mean())
 
@@ -189,9 +170,7 @@ def main(seed):
     if len(nodes) != graph["num_nodes"]:
         raise ValueError("Graph/node metadata size mismatch.")
 
-    nodes["is_eligible"] = (
-        nodes["is_eligible"].astype(str).str.lower() == "true"
-    )
+    nodes["is_eligible"] = nodes["is_eligible"].astype(str).str.lower() == "true"
 
     output_dir = ROOT / "outputs"
     figure_dir = ROOT / "figures"
@@ -226,19 +205,11 @@ def main(seed):
         print("    Using existing Louvain tracks.")
     else:
         print("    Computing weighted Louvain ensemble.")
-
-        tracks = compute_tracks(
-            G,
-            anchor,
-            cfg["louvain_seeds"],
-        )
-
+        tracks = compute_tracks(G, anchor, cfg["louvain_seeds"])
         tracks.to_csv(track_path, index=False)
 
-    if (
-        len(tracks) != len(nodes)
-        or tracks["node_index"].nunique() != len(nodes)
-    ):
+    if (len(tracks) != len(nodes)
+        or tracks["node_index"].nunique() != len(nodes)):
         raise ValueError("Louvain track indices do not match graph.")
 
     nodes = (
@@ -254,14 +225,8 @@ def main(seed):
         )
     )
 
-    distances = nx.single_source_shortest_path_length(
-        G, anchor
-    )
-
-    nodes["distance"] = (
-        nodes["node_index"].map(distances)
-    )
-
+    distances = nx.single_source_shortest_path_length(G, anchor)
+    nodes["distance"] = nodes["node_index"].map(distances)
     eligible = nodes[nodes["is_eligible"]].copy()
 
     print("\nEligible track summary:")
@@ -296,32 +261,23 @@ def main(seed):
 
     print("\n[3/4] Evaluating trained GNN rankings")
 
-    files = sorted(
-        output_dir.glob(
-            f"gnn_rankings_k*_seed{seed}.csv"
-        )
-    )
+    files = sorted(output_dir.glob(f"gnn_rankings_k*_seed{seed}.csv"))
 
     if not files:
-        raise FileNotFoundError(
-            "No GNN ranking CSVs found."
-        )
+        raise FileNotFoundError("No GNN ranking CSVs found.")
 
     results = []
 
     for file in files:
         ranking = pd.read_csv(file)
-
         ranking = ranking.merge(
-            eligible[
-                [
-                    "node_index",
-                    "track",
-                    "degree",
-                    "distance",
-                    "go_positive",
-                ]
-            ],
+            eligible[[
+                "node_index",
+                "track",
+                "degree",
+                "distance",
+                "go_positive",
+            ]],
             on="node_index",
             how="inner",
             validate="one_to_one",
@@ -330,14 +286,10 @@ def main(seed):
         if ranking.empty:
             continue
 
-        method = file.stem.replace(
-            "gnn_rankings_", ""
-        )
+        method = file.stem.replace("gnn_rankings_", "")
 
         for track in TRACKS:
-            pool = ranking[
-                ranking["track"] == track
-            ].copy()
+            pool = ranking[ranking["track"] == track].copy()
 
             if len(pool) < 20:
                 continue
@@ -380,24 +332,17 @@ def main(seed):
         method="fdr_bh",
     )[1]
 
-    results = results.sort_values(
-        ["track", "method"]
-    )
-
+    results = results.sort_values(["track", "method"])
     results.to_csv(
         output_dir / "gnn_go_evaluation.csv",
         index=False,
     )
 
-    print(
-        results[
-            [
-                "method", "track", "hits_at_20",
-                "precision_at_20", "matched_fe",
-                "p_value", "bh_q",
-            ]
-        ].to_string(index=False)
-    )
+    print(results[[
+        "method", "track", "hits_at_20",
+        "precision_at_20", "matched_fe",
+        "p_value", "bh_q",
+    ]].to_string(index=False))
 
     print("\n[4/4] Generating figure")
 
@@ -409,11 +354,7 @@ def main(seed):
 
     pivot = pivot.reindex(columns=TRACKS)
 
-    ax = pivot.plot.bar(
-        figsize=(9, 4.5),
-        rot=0,
-    )
-
+    ax = pivot.plot.bar(figsize=(9, 4.5), rot=0)
     ax.set_xlabel("GNN configuration")
     ax.set_ylabel("GO Precision@20")
     ax.set_ylim(0, 1)

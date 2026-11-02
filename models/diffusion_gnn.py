@@ -8,10 +8,6 @@ from torch_geometric.nn import APPNP
 class DiffusionGNN(nn.Module):
     """
     MLP encoder + weighted APPNP propagation.
-
-    H0 = MLP(X)
-    H(k+1) = alpha * S @ H(k) + (1-alpha) * H0
-
     Output embeddings are L2-normalised for ranking and
     inner-product edge reconstruction.
     """
@@ -80,11 +76,7 @@ class DiffusionGNN(nn.Module):
 
         return z
 
-    def decode(
-        self,
-        z: torch.Tensor,
-        pairs: torch.Tensor,
-    ) -> torch.Tensor:
+    def decode(self, z: torch.Tensor, pairs: torch.Tensor) -> torch.Tensor:
         """Return edge logits for node pairs."""
         u, v = pairs
         return self.logit_scale * (z[u] * z[v]).sum(dim=-1)
