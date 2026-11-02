@@ -31,3 +31,9 @@ outputs/
 *.synctex.gz
 *.fdb_latexmk
 *.fls
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
